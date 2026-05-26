@@ -1,0 +1,105 @@
+import type {
+  CurrentAccountInspectionSnapshot,
+  AccountSecuritySnapshot,
+  CurrentAccountSecuritySnapshot,
+  VerificationResendWindow,
+  VerificationStatusView,
+} from '@alyldas/uniauth-core'
+
+export function serializeAccountSecuritySnapshot(snapshot: AccountSecuritySnapshot) {
+  return {
+    user: {
+      id: snapshot.user.id,
+      email: snapshot.user.email ?? null,
+      phone: snapshot.user.phone ?? null,
+      displayName: snapshot.user.displayName ?? null,
+      createdAt: snapshot.user.createdAt.toISOString(),
+      updatedAt: snapshot.user.updatedAt.toISOString(),
+      disabledAt: snapshot.user.disabledAt?.toISOString() ?? null,
+    },
+    identities: snapshot.identities.map((identity) => ({
+      id: identity.id,
+      provider: identity.provider,
+      status: identity.status,
+      email: identity.email ?? null,
+      emailVerified: identity.emailVerified ?? null,
+      phone: identity.phone ?? null,
+      phoneVerified: identity.phoneVerified ?? null,
+      trustLevel: identity.trustLevel ?? null,
+      createdAt: identity.createdAt.toISOString(),
+      updatedAt: identity.updatedAt.toISOString(),
+      disabledAt: identity.disabledAt?.toISOString() ?? null,
+    })),
+    credentials: snapshot.credentials.map((credential) => ({
+      id: credential.id,
+      type: credential.type,
+      subject: credential.subject,
+      createdAt: credential.createdAt.toISOString(),
+      updatedAt: credential.updatedAt.toISOString(),
+    })),
+    sessions: snapshot.sessions.map((session) => ({
+      id: session.id,
+      status: session.status,
+      createdAt: session.createdAt.toISOString(),
+      expiresAt: session.expiresAt.toISOString(),
+      lastSeenAt: session.lastSeenAt?.toISOString() ?? null,
+      revokedAt: session.revokedAt?.toISOString() ?? null,
+    })),
+  }
+}
+
+export function serializeCurrentAccountSecuritySnapshot(snapshot: CurrentAccountSecuritySnapshot) {
+  return {
+    ...serializeAccountSecuritySnapshot(snapshot.account),
+    currentSessionId: snapshot.currentSessionId,
+  }
+}
+
+export function serializeCurrentAccountInspectionSnapshot(
+  snapshot: CurrentAccountInspectionSnapshot,
+) {
+  return {
+    ...serializeCurrentAccountSecuritySnapshot(snapshot),
+    auditEvents: snapshot.auditEvents.map((event) => ({
+      id: event.id,
+      type: event.type,
+      occurredAt: event.occurredAt.toISOString(),
+      userId: event.userId ?? null,
+      identityId: event.identityId ?? null,
+      sessionId: event.sessionId ?? null,
+    })),
+    nextAuditCursor: snapshot.nextAuditCursor
+      ? {
+          id: snapshot.nextAuditCursor.id,
+          occurredAt: snapshot.nextAuditCursor.occurredAt.toISOString(),
+        }
+      : null,
+  }
+}
+
+export function serializeVerificationStatusView(view: VerificationStatusView) {
+  return {
+    id: view.id,
+    purpose: view.purpose,
+    status: view.status,
+    expiresAt: view.expiresAt.toISOString(),
+    consumedAt: view.consumedAt?.toISOString() ?? null,
+  }
+}
+
+export function serializeVerificationResendWindow(view: VerificationResendWindow) {
+  return {
+    id: view.id,
+    purpose: view.purpose,
+    status: view.status,
+    provider: view.provider ?? null,
+    channel: view.channel ?? null,
+    expiresAt: view.expiresAt.toISOString(),
+    consumedAt: view.consumedAt?.toISOString() ?? null,
+    resendAllowed: view.resendAllowed,
+    expired: view.expired,
+    resendAvailableAt: view.resendAvailableAt.toISOString(),
+    cooldownSeconds: view.cooldownSeconds,
+    cooldownRemainingSeconds: view.cooldownRemainingSeconds,
+  }
+}
