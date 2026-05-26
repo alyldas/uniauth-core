@@ -1,0 +1,270 @@
+# Local Auth Flows
+
+UniAuth keeps local auth flows headless. Applications own routes, forms, cookies, delivery
+providers, queues, password policy, and rate-limit storage.
+
+## OTP
+
+Use the unified OTP API for email and phone sign-in:
+
+```ts
+const challenge = await service.public.otp.start({
+  purpose: VerificationPurpose.SignIn,
+  channel: OtpChannel.Email,
+  target: 'alice@example.com',
+})
+
+const result = await service.public.otp.signIn({
+  verificationId: challenge.verificationId,
+  secret: 'code from user input',
+  channel: OtpChannel.Email,
+})
+
+const resent = await service.public.otp.resend({
+  verificationId: challenge.verificationId,
+})
+
+await service.admin.verifications.cancelOtp({
+  verificationId: challenge.verificationId,
+  channel: OtpChannel.Email,
+})
+```
+
+`finishOtpChallenge` remains for non-sign-in verification purposes such as link, re-auth, recovery,
+and app-owned custom purposes.
+
+If the route already trusts a local `sessionToken` and only needs a recent-auth OTP challenge for
+the current account, prefer the current-account helper over rebuilding the owned-target lookup in
+application code:
+
+```ts
+const challenge = await service.account.reAuth.startOtp({
+  sessionToken,
+  identityId,
+  channel: OtpChannel.Email,
+})
+
+const resent = await service.account.reAuth.resendOtp({
+  sessionToken,
+  verificationId: challenge.verificationId,
+})
+
+const confirmation = await service.account.reAuth.finishOtp({
+  sessionToken,
+  verificationId: resent.verificationId,
+  secret: 'code from user input',
+})
+```
+
+The application still owns how the confirmation object is stored as a recent-auth marker in its own
+session, cookie, or server-side request context.
+
+If the user abandons that step instead of finishing it, the route can cancel the current-account
+challenge on the same trusted boundary:
+
+```ts
+await service.account.reAuth.cancelOtp({
+  sessionToken,
+  verificationId: challenge.verificationId,
+})
+```
+
+If the UI only needs to know whether a fresh recent-auth step is currently required for a sensitive
+self-service action, prefer the dedicated status helper over hand-rolled freshness math:
+
+```ts
+const status = await service.account.reAuth.status({
+  sessionToken,
+  action: AuthPolicyAction.ChangePassword,
+  reAuthenticatedAt: recentAuthMarker,
+})
+```
+
+The default OTP generator emits a 6-digit numeric code. Applications can configure a numeric length
+from 4 to 8 digits, provide a custom generator, or pass a per-request `secret`. Per-request secrets
+win over configured generation. Empty generated secrets are rejected before a verification is
+created.
+
+`emailOtpSubject` customizes only the built-in email OTP subject. Full templates, localization,
+provider payloads, queues, retry, and dead-letter behavior remain sender-adapter concerns. See
+[OTP delivery boundary](otp-delivery.md).
+
+## Magic Link
+
+Email magic links are sign-in verifications delivered through `EmailSender`. Core creates and hashes
+the secret, then calls your `createLink` function.
+
+```ts
+const magic = await service.public.magicLink.start({
+  email: 'alice@example.com',
+  createLink: ({ verificationId, secret }) =>
+    `/auth/magic?verification=${verificationId}&token=${secret}`,
+})
+
+await service.public.magicLink.finish({
+  verificationId: magic.verificationId,
+  secret: 'token from request',
+})
+
+const resentMagic = await service.public.magicLink.resend({
+  verificationId: magic.verificationId,
+  createLink: ({ verificationId, secret }) =>
+    `/auth/magic?verification=${verificationId}&token=${secret}`,
+})
+
+await service.admin.verifications.cancelMagicLink({
+  verificationId: magic.verificationId,
+})
+```
+
+The application owns route parsing, redirects, cookies, and browser security headers.
+
+## Passwords
+
+Passwords use `CredentialRepo`, `PasswordHasher`, and an optional `PasswordPolicy` for new password
+material. Core does not bundle a password hashing runtime or strength rules; production apps should
+pass a hasher backed by their chosen algorithm, runtime, and parameters, plus a policy backed by
+their strength and breached-password requirements.
+
+```ts
+await service.account.password.set({
+  sessionToken,
+  password: 'password from settings form',
+  reAuthenticatedAt: recentAuthMarker,
+})
+
+await service.public.password.signIn({
+  email: 'alice@example.com',
+  password: 'password from sign-in form',
+})
+```
+
+Production bootstraps can set `requirePasswordPolicy: true` to fail fast when password flows are
+enabled without an application password policy.
+
+The password sign-in method is also an `AuthIdentity` with provider `password`, so unlink policy and
+last-sign-in-method protection stay shared with provider, OTP, and magic-link identities.
+
+Use `changePassword` when the user knows the current password. Use email password recovery when the
+user only has a recovery token:
+
+```ts
+const recovery = await service.public.passwordRecovery.start({
+  email: 'alice@example.com',
+  createLink: ({ verificationId, secret }) =>
+    `/auth/recovery?verification=${verificationId}&token=${secret}`,
+})
+
+await service.admin.credentials.finishPasswordRecovery({
+  verificationId: recovery.verificationId,
+  secret: 'token from request',
+  newPassword: 'new password from reset form',
+})
+
+const resentRecovery = await service.public.passwordRecovery.resend({
+  verificationId: recovery.verificationId,
+  createLink: ({ verificationId, secret }) =>
+    `/auth/recovery?verification=${verificationId}&token=${secret}`,
+})
+
+await service.admin.verifications.cancelPasswordRecovery({
+  verificationId: recovery.verificationId,
+})
+```
+
+Recovery does not create a session. Applications can decide whether a successful reset should be
+followed by a separate sign-in.
+
+If the route already trusts a local session token and only needs to prove the current password
+before a sensitive self-service mutation, prefer the current-account confirmation helper:
+
+```ts
+const confirmation = await service.account.reAuth.confirmPassword({
+  sessionToken,
+  currentPassword: body.currentPassword,
+})
+```
+
+The confirmation is the recent-auth marker: it includes the trusted `currentSessionId`, `userId`,
+`markerId`, and `reAuthenticatedAt`. Store and forward that object, not a client supplied timestamp.
+Token-based current-account mutation helpers reject a bare `Date`, unknown marker ids, and markers
+issued for another session.
+
+If the route must actively enforce the same recent-auth policy before app-owned follow-up work,
+keep that on the trusted token boundary too:
+
+```ts
+await service.account.reAuth.assert({
+  sessionToken,
+  action: AuthPolicyAction.ChangePassword,
+  reAuthenticatedAt: recentAuthMarker,
+})
+```
+
+Current-account linking routes can pass that same recent-auth marker into
+`account.identities.link(...)` instead of resolving the current user separately. See
+[Account security recipes](account-security.md) for the canonical route shape.
+
+## Neutral Responses
+
+Public start responses should not reveal whether an account exists. Core keeps start flows focused
+on challenge creation/delivery and uses neutral errors for password credential misses, wrong
+passwords, disabled users, and inconsistent credential state.
+
+Applications should avoid exposing repository lookups, sender decisions, or rate-limit bucket names
+directly in HTTP responses.
+
+For trusted resend cooldown reads and canonical 429 shaping, use
+[OTP and magic-link abuse-control recipes](abuse-control.md).
+
+For trusted cancellation endpoints that terminate pending verification flows without direct
+repository writes, use [OTP and magic-link abuse-control recipes](abuse-control.md).
+
+## Rate Limits
+
+Wire `RateLimiter` to security-sensitive attempts:
+
+- `RateLimitAction.ProviderSignIn`: provider and provider user id.
+- `RateLimitAction.OtpStart`: channel and normalized target.
+- `RateLimitAction.OtpFinish`: channel and verification id.
+- `RateLimitAction.MagicLinkStart`: email channel and normalized email.
+- `RateLimitAction.MagicLinkFinish`: email channel and verification id.
+- `RateLimitAction.MagicLinkResend`: email channel and normalized email.
+- `RateLimitAction.PasswordSignIn`: email channel and normalized email.
+- `RateLimitAction.PasswordRecoveryStart`: email channel and normalized email.
+- `RateLimitAction.PasswordRecoveryFinish`: email channel and verification id.
+- `RateLimitAction.PasswordRecoveryResend`: email channel and normalized email.
+- `RateLimitAction.OtpResend`: channel and normalized target.
+
+The core port is intentionally storage/backend agnostic. Redis, database counters, edge rate limits,
+headers, retry-after formatting, and abuse analytics remain application or adapter concerns.
+Production runtime construction requires a limiter by default; set `requireRateLimiter: false` only
+for low-level tests or controlled internal runtimes. Verification resend cooldown defaults to 60
+seconds in production runtime configuration and can be set to `0` explicitly when a test or
+local-only flow needs immediate resend behavior.
+
+Public helper surface:
+
+- `rateLimitKey(...)` for canonical key composition when tests or surrounding middleware need the
+  same low-level format as core;
+- `getRateLimitedErrorDetails(error)` for typed inspection of stable `rate_limited` errors;
+- `getVerificationResendWindow(...)` for trusted resend countdown and verification cooldown reads;
+- `cancelVerification(...)` and the flow-aware cancellation helpers for trusted shutdown of pending
+  verification flows.
+
+## Production Boundaries
+
+Current local auth hardening does not try to solve every production edge. The OTP delivery boundary
+is documented in [OTP delivery boundary](otp-delivery.md), and production normalization policy can
+be wired through the shared `normalizer` runtime option documented in
+[Normalization boundary](normalization.md).
+
+For storage and security invariants, see [Architecture](architecture.md) and
+[Security model](security.md).
+
+For framework-specific route, cookie, and response composition, see
+[Backend integration recipes](backend-recipes.md).
+For resend cooldown and abuse-control endpoint recipes, see [OTP and magic-link abuse-control
+recipes](abuse-control.md).
+For cookie, bearer, and mobile client session transport choices, see
+[Session transport recipes](session-transport.md).

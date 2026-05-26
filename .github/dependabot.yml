@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'npm'
+    groups:
+      dev-dependencies:
+        dependency-type: 'development'
+        patterns:
+          - '*'
+    # Keep Node runtime types on the minimum supported Node.js major.
+    ignore:
+      - dependency-name: '@types/node'
+        update-types:
+          - 'version-update:semver-major'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'ci'
+    groups:
+      github-actions:
+        patterns:
+          - '*'
