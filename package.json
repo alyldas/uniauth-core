@@ -1,0 +1,100 @@
+{
+  "name": "@alyldas/uniauth-core",
+  "version": "0.1.0",
+  "description": "Headless identity orchestration core for TypeScript and Node.js.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "PolyForm-Strict-1.0.0",
+  "author": {
+    "name": "alyldas",
+    "email": "alyldas@ya.ru"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alyldas/uniauth-core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alyldas/uniauth-core/issues"
+  },
+  "homepage": "https://github.com/alyldas/uniauth-core#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
+  },
+  "sideEffects": false,
+  "types": "./dist/entrypoints/root.d.ts",
+  "files": [
+    "dist",
+    "examples",
+    "docs",
+    "README.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "COMMERCIAL.md",
+    "NOTICE",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/entrypoints/root.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/entrypoints/contracts.d.ts",
+      "import": "./dist/contracts/index.js"
+    },
+    "./testing": {
+      "types": "./dist/entrypoints/testing.d.ts",
+      "import": "./dist/testing/index.js"
+    }
+  },
+  "scripts": {
+    "audit:deps": "npm audit --audit-level=moderate",
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "check": "npm run audit:deps && npm run format:check && npm run docs:links && npm run lint && npm run typecheck && npm run test:boundaries && npm run coverage && npm run test:exports && npm run lint:package && npm run test:types-package && npm run pack:dry",
+    "check:compose": "docker compose run --rm --build check",
+    "check:docker": "docker build --target check -t alyldas-uniauth-core-check .",
+    "coverage": "npm run test -- --coverage",
+    "docs:links": "node scripts/check-md-links.cjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "hooks:install": "node scripts/install-husky.cjs",
+    "lint": "eslint .",
+    "lint:package": "publint",
+    "pack:dry": "npm pack --dry-run",
+    "prepack": "npm run build",
+    "prepare": "npm run hooks:install",
+    "test": "vitest run test/coverage.test.ts test/domain-rules.test.ts test/examples.test.ts test/in-memory.test.ts test/magic-link.test.ts test/normalization.test.ts test/otp-options.test.ts test/password.test.ts test/rate-limit.test.ts test/resend-execution.test.ts test/resend-window.test.ts test/security-storage.test.ts test/verification-cancellation.test.ts test/views.test.ts test/core/*.test.ts test/provider-policy/*.test.ts test/service-edges/*.test.ts",
+    "test:exports": "npm run build && vitest run smoke/exports.test.ts",
+    "test:boundaries": "node scripts/check-import-boundaries.cjs",
+    "test:types-package": "attw --pack . --profile esm-only --quiet",
+    "typecheck": "tsc -p tsconfig.typecheck.json && tsc -p examples/tsconfig.json"
+  },
+  "keywords": [
+    "auth",
+    "authentication",
+    "identity",
+    "account-linking",
+    "typescript"
+  ],
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
+    "@types/node": "^22.19.19",
+    "@vitest/coverage-v8": "^4.1.7",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.0.0",
+    "publint": "^0.3.21",
+    "tsup": "^8.0.0",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.59.4",
+    "vitest": "^4.0.0"
+  }
+}

@@ -1,0 +1,328 @@
+# Architecture
+
+`@alyldas/uniauth-core` is split into four layers.
+
+## Domain
+
+Domain exports stable types for users, identities, credentials, verifications, sessions, provider
+assertions, audit events, branded IDs, and utility constructors.
+
+The central invariant is that `User` and `AuthIdentity` are different entities. A user can have many
+identities, and email/phone are optional identity attributes.
+
+## Application
+
+`DefaultAuthService` owns use-case orchestration:
+
+- `signIn`
+- `startOtpChallenge`
+- `finishOtpChallenge`
+- `finishOtpSignIn`
+- `startEmailMagicLinkSignIn`
+- `finishEmailMagicLinkSignIn`
+- `signInWithPassword`
+- `setPassword`
+- `changePassword`
+- `startEmailPasswordRecovery`
+- `finishEmailPasswordRecovery`
+- `link`
+- `unlink`
+- `mergeAccounts`
+- `createSession`
+- `revokeSession`
+- `revokeUserSessions`
+- `resolveSession`
+- `resolveSessionContext`
+- `getCurrentAccountSecuritySnapshot`
+- `getCurrentAccountInspectionSnapshot`
+- `getCurrentAccountClosureExportSnapshot`
+- `getCurrentAccountAuditEventPage`
+- `startCurrentAccountOtpReAuth`
+- `resendCurrentAccountOtpReAuth`
+- `cancelCurrentAccountOtpReAuth`
+- `finishCurrentAccountOtpReAuth`
+- `getCurrentAccountReAuthStatus`
+- `assertCurrentAccountReAuth`
+- `linkCurrentIdentityByToken`
+- `revokeCurrentSessionByToken`
+- `revokeOwnedSessionByToken`
+- `revokeOtherSessionsByToken`
+- `unlinkCurrentIdentityByToken`
+- `updateCurrentAccountProfileByToken`
+- `startCurrentAccountContactChange`
+- `resendCurrentAccountContactChange`
+- `cancelCurrentAccountContactChange`
+- `finishCurrentAccountContactChange`
+- `confirmCurrentAccountPasswordByToken`
+- `setCurrentAccountPasswordByToken`
+- `changeCurrentAccountPasswordByToken`
+- `closeCurrentAccountByToken`
+- `touchSession`
+- `getUser`
+- `getUserCredentials`
+- `getUserSessions`
+- `getAuditEvents`
+- `getAccountSecuritySnapshot`
+- `getAccountInspectionSnapshot`
+- `createVerification`
+- `getVerification`
+- `toAuditEventView`
+- `toAccountSecuritySnapshot`
+- `toVerificationStatusView`
+- `consumeVerification`
+
+It delegates authorization decisions to `AuthPolicy` and storage/provider/sender work to ports.
+
+The flat method names remain available for compatibility. New route code should prefer the
+canonical grouped surface, which is organized by caller trust boundary:
+
+- `auth.public`: unauthenticated sign-in, OTP, magic-link, and password-recovery flows.
+- `auth.account`: current-account self-service by `sessionToken`, including profile, contact,
+  password, recent-auth, own sessions, own identities, snapshots, audit page, and account closure.
+- `auth.admin`: trusted backend and operator flows by `userId`, including user reads, user sessions,
+  account merge/link/unlink, raw session operations, raw verification operations, and audit reads.
+
+Public sign-in methods return `PublicAuthResult`, whose user, identity, and session fields are safe
+views. Raw `Session.tokenHash`, `Credential.passwordHash`, and `Verification.secretHash` stay out of
+the canonical public facade.
+
+```ts
+await auth.public.password.signIn({ email, password })
+await auth.account.profile.update({ sessionToken, displayName })
+await auth.admin.users.get(userId)
+```
+
+## Merge and Trust Boundary
+
+`mergeAccounts(...)` is intentionally a privileged account mutation. It requires `sourceSessionToken`
+so the active source account is proven before state moves to the target account. Trusted backend and
+admin routes may still add stronger application-level approvals around that proof, but they should
+not merge by raw `sourceUserId` alone.
+
+## Ports
+
+Core defines repository ports, credential ports, provider registry, sender ports, rate-limit port,
+password hashing port, audit log port, verification secret hashing extension point, and
+`UnitOfWork`.
+
+The audit log port is now read-capable as well as write-capable. Core still owns local security
+event creation, while trusted backend tooling can read the resulting `AuditEvent` timeline through
+the public service layer without reaching into adapter internals.
+
+Session resolution remains transport-agnostic. Core can now collapse `sessionToken -> session + user`
+into one trusted read-side helper, while cookie parsing, bearer extraction, and request decoration
+stay application-owned.
+
+Current-account security routes can also stay on trusted token-based helpers without reassembling
+that flow on every backend. Core can now resolve a trusted local `sessionToken`, load the current
+account-security aggregate, or revoke the current/other local sessions through one narrow helper
+layer while cookie clearing, header parsing, and outward payload shaping remain application-owned.
+That same trusted boundary now also covers current-account inspection snapshots and current-account
+audit page reads, so self-service security routes do not have to mix admin inspection helpers with
+manual session ownership resolution. Selected-device revoke, sign-in-method link or unlink, and
+local password setup or change can now stay on that same token-based boundary instead of bouncing
+back to raw `userId` mutation calls after middleware resolution. Recent-auth bootstrapping can now
+stay on the same trusted boundary too: applications can start, resend, finish, or cancel
+current-account OTP re-auth by owned identity and `sessionToken`, or confirm the current password
+from `sessionToken`, then persist the resulting server-issued marker object in app-owned session
+state. That marker carries `currentSessionId`, `userId`, `markerId`, and `reAuthenticatedAt`, and
+token-based current-account mutations reject bare timestamps, unknown marker ids, or markers issued
+for another current session. The same layer can now also answer or enforce whether recent auth is
+currently required for a specific sensitive current-account action before application-owned side
+effects continue, without dropping back to generic verification ownership checks in route code.
+Account closure follows the same shape:
+the current session token identifies the actor, core disables the current user, revokes active
+local sessions, and leaves cookie clearing, legal retention, and downstream data deletion to the
+application. Pre-closure export snapshots also stay on that boundary: core returns safe local auth
+views and a bounded audit window, while file generation, legal export policy, billing state, and
+application-profile data remain outside the package. Current-account profile updates stay on the
+same boundary for local auth display-name changes. Verified email or phone changes can also stay on
+that boundary through a dedicated contact-change OTP lifecycle that updates only the local `User`
+contact field after proof of the new target. Sign-in identities, password credential subjects,
+OAuth provider profiles, avatars, media storage, notification preferences, and product profile
+records remain application-owned or identity-flow-owned.
+
+OTP challenges use `EmailSender` for email delivery and `SmsSender` for phone delivery. Core
+creates and hashes the verification secret, tracks the verification lifecycle, and maps successful
+sign-in challenges to local provider identities. The application owns the real SMTP, transactional
+email, SMS gateway, or queue adapter.
+
+OTP sign-in uses the unified `startOtpChallenge` and `finishOtpSignIn` API for both email and phone.
+The built-in generator stays numeric, with configurable length from 4 to 8 digits, and applications
+can provide a custom generator for app-owned formats. The built-in email OTP subject is configurable
+without replacing the whole `EmailSender`.
+
+Verification records keep core-owned routing fields such as `provider` and `channel` separate from
+app-owned `metadata`. Adapters should persist those fields explicitly instead of inferring core flow
+state from arbitrary metadata.
+
+Email magic links use the same verification lifecycle and the existing `EmailSender` port. The
+application provides `createLink` per start request, so routes, domains, redirect handling, cookies,
+and query parameter conventions remain outside core.
+
+Password credentials use `CredentialRepo` for stored password hashes, `PasswordHasher` for
+hash/verify work, and an optional `PasswordPolicy` port for new password material. Core does not
+bundle a password hashing runtime or strength rules; production applications pass adapters backed by
+their chosen algorithm, parameters, secret-loading policy, and breached-password or strength checks.
+Password identity records use the local `password` provider so unlink and last-sign-in-method policy
+remains shared with other identities.
+
+Verification hashing is delegated to `SecretHasher`. The default hasher uses salted `scrypt` so
+short OTP values are not stored as fast hashes. Production deployments that need app-owned key
+material can pass a custom hasher, for example `createHmacSecretHasher` with an application-owned
+pepper loaded during bootstrap.
+
+Rate limiting is delegated to `RateLimiter`. Core only defines stable actions and calls the port
+before security-sensitive attempts such as provider sign-in, OTP start/finish, magic-link
+start/finish, password sign-in, and password recovery. Applications own the real Redis, database,
+edge runtime, or hosted rate-limit adapter and decide exact bucket sizes, key hashing, and retry
+headers. Production runtime construction fails fast without a limiter by default; low-level tests or
+controlled internal runtimes can set `requireRateLimiter: false` to opt out explicitly. Production
+bootstraps can also set `requirePasswordPolicy: true` to fail fast when password flows are enabled
+without an application password policy. Verification resend cooldown defaults to 60 seconds in
+production runtime configuration and can be set to `0` only by explicit runtime configuration.
+
+The built-in `normalizeEmail`, `normalizePhone`, and `normalizeTarget` helpers are compatibility
+utilities, not a full production canonicalization policy. If an application needs strict email
+validation or E.164 phone handling, it should pass one shared `normalizer` boundary across provider
+assertions, OTP, magic link, password, and repository lookup paths instead of normalizing each flow
+independently. See [Normalization boundary](normalization.md).
+
+Provider integrations use the same `AuthProvider` boundary. External adapter packages or
+application code validate provider-specific input, map it into `ProviderIdentityAssertion`, and
+leave SDK setup, authorization URL creation, callback routes, state and nonce validation, redirect
+URI policy, provider secrets, HTTP clients, token storage, bot setup, frontend bridge code, cookies,
+and persistence outside core. Applications can attach normalized trust context to assertions so
+`AuthPolicy` can make auto-link, explicit-link, and merge decisions without receiving raw SDK
+objects.
+
+Delivery happens after the verification record has been created inside `UnitOfWork`. If a sender
+fails, the pending verification stays in storage until normal expiry or adapter cleanup; core does
+not roll back storage after an external delivery side effect fails.
+
+Queue-backed delivery should wrap `EmailSender` or `SmsSender`, not replace them with a new core
+dispatcher contract. Core does not track delivery attempts, retries, dead-letter state, or
+provider-specific webhooks. Those remain application-owned or optional-adapter-owned delivery
+infrastructure concerns.
+
+`UnitOfWork` is intentionally part of v0.1 so storage adapters can provide real transaction
+boundaries for link, unlink, merge, session, and verification flows.
+
+## Testing Adapter
+
+`@alyldas/uniauth-core/testing` provides an in-memory implementation for tests, demos, and examples. It
+includes in-memory email and SMS senders, a rate limiter, and a low-cost `scrypt` password hasher so
+local auth flows can be exercised without SMTP, SMS, Redis, or password-hashing runtime setup. It is
+not a production persistence adapter. The public testing entry point stays stable while internal
+modules keep store/repository state, sender fakes, and support utilities separate so persistence
+work does not pull the testing kit back into one monolith.
+
+## Adapter Requirements
+
+Storage adapters should:
+
+- enforce unique active provider identities by `(provider, providerUserId)`;
+- keep user, identity, session, verification, and audit records separate;
+- keep password credentials separate from identities and store only password hashes;
+- store only session token hashes, not bearer session tokens;
+- apply `UnitOfWork` to sensitive multi-write flows;
+- keep merge conflict detection aligned with unique credential and identity ownership constraints;
+- store only hashed verification secrets;
+- avoid email/phone ownership inference outside the policy-controlled flow.
+
+Provider adapters should expose `finish()` and return a `ProviderIdentityAssertion`. Core does not
+own provider SDK setup, redirect routes, raw provider payload storage, or application secrets.
+Provider-specific signature validation can live in a small reference adapter when it does not force
+SDK, framework, or storage dependencies into the core package.
+When provider trust matters, adapters should emit a small `trust` object with stable string
+signals instead of leaking provider SDK payloads into core policy hooks.
+
+## Contracts vs Ports
+
+The project has two related boundaries:
+
+- `@alyldas/uniauth-core/contracts` exports stable, implementation-neutral contracts that are meant for
+  package-level compatibility and shared type/runtime understanding.
+- Runtime `ports` are integration seams that are injected at application bootstrap through adapters or
+  concrete helper implementations such as stores, senders, providers, rate limiters, and hashers.
+
+In practice: import contracts from `@alyldas/uniauth-core/contracts` when you need stable semantics across
+packages, and keep `ports` as app-owned wiring points. This prevents implementation details from
+leaking across package boundaries while preserving an explicit runtime ownership model.
+
+## Provider Adapter Layout
+
+Provider adapters live outside core. The root entry point stays focused on core service APIs;
+provider-specific code imports an external adapter package or application-owned module.
+
+Each provider family should keep the same rough split when it reduces real complexity:
+
+- a public package or module entrypoint;
+- provider IDs and small constants;
+- payload extraction from `FinishInput`;
+- provider-specific validation and freshness checks;
+- assertion mapping into `ProviderIdentityAssertion`;
+- provider factory functions that return `AuthProvider`.
+
+Adapter code should stay SDK-free unless the adapter is moved out of core into a dedicated package.
+Framework handlers, redirects, callbacks, cookies, secret loading, and provider SDK clients remain
+application-owned.
+
+## Repository Shape
+
+The project starts as a single package so the core domain contracts can stabilize before adapters
+become separate packages.
+
+Future provider, persistence, and HTTP integrations should stay outside the core package unless they
+are small reference contracts. If the ecosystem grows into multiple maintained adapters, the project
+can move to a monorepo with packages for storage, providers, and framework-specific HTTP wiring.
+The pre-`1.0.0` cleanup sequence and extraction criteria are tracked in
+[Package boundary cleanup](package-boundaries.md).
+
+## Current Public Entry Points
+
+The current package already models the intended long-term split through explicit public entry points:
+
+- `@alyldas/uniauth-core`:
+  core domain types, service facade, policies, errors, read-side helpers, and local auth flows.
+- `@alyldas/uniauth-core/contracts`:
+  implementation-free contracts for repositories, runtime primitives, senders, rate limits, and
+  provider integration boundaries.
+- `@alyldas/uniauth-core/testing`:
+  in-memory store, senders, providers, and test-only support utilities.
+
+This is a modular monolith boundary, not a monorepo yet. New capabilities should prefer an explicit
+subpath before introducing another root export or another package.
+
+## Extraction Criteria
+
+Move a subpath into a separate npm package only when most of these are true:
+
+1. The public API is already consumed through an explicit subpath rather than a root export.
+2. The module can depend only on stable root/core types and `@alyldas/uniauth-core/contracts`, not on
+   internal source paths.
+3. The module has runtime dependencies, operational assumptions, or release cadence that can change
+   independently from core.
+4. The module has its own focused tests, smoke coverage, and docs/examples without hidden coupling
+   to unrelated package internals.
+5. The extraction reduces real package ownership pressure, such as provider SDK churn, database
+   driver cadence, or framework-specific integration surface.
+6. The new boundary is understandable enough that a consumer can choose it intentionally.
+
+If those criteria are not met, keep the code in the current package and harden the subpath
+boundary instead of splitting prematurely.
+
+## Migration Expectations
+
+- Do not import from internal `src/**` paths in application code, tests outside this repository, or
+  downstream packages.
+- Prefer the public subpath that matches the module family you need; do not assume that a root
+  compatibility re-export is the permanent home of that API.
+- When a future extraction happens, the same release should update the docs, examples, changelog,
+  and migration notes so consumers can move from the old subpath cleanly.
+- Before `1.0.0`, package extraction can still happen in a minor release, but only after the
+  boundary has been explicit and documented first.
+
+For framework-level HTTP composition examples, see [Backend integration recipes](backend-recipes.md).
+For trusted backend inspection composition on top of the read-side surface, see
+[Support and admin inspection recipe](support-inspection.md).

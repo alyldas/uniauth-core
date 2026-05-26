@@ -1,0 +1,279 @@
+import type { AuthServiceRuntime } from './runtime.js'
+import { normalizeMetadataRecord } from './metadata.js'
+import { optionalProp } from './optional.js'
+import { audit, getActiveUser } from './support.js'
+import type {
+  CreateSessionInput,
+  CreateSessionResult,
+  RevokeUserSessionsInput,
+  RevokeUserSessionsResult,
+  ResolveSessionInput,
+  Session,
+  SessionId,
+  TouchSessionInput,
+  UserId,
+} from '../domain/types.js'
+import {
+  AuditEventType,
+  SessionStatus,
+  hasActiveSessionStatus,
+  isActiveSession,
+} from '../domain/types.js'
+import { UniAuthError, UniAuthErrorCode, invalidInput, isUniAuthError } from '../errors/index.js'
+import { generateSecret, hashLegacySha256Secret, hashOpaqueSecret } from '../utils/secrets.js'
+import { addSeconds, assertValidDate } from '../utils/time.js'
+
+const RESERVED_SESSION_METADATA_KEYS = new Set(['currentAccountRecentAuth'])
+
+export async function createSession(
+  runtime: AuthServiceRuntime,
+  input: CreateSessionInput,
+): Promise<CreateSessionResult> {
+  return runtime.transaction.run(async () => {
+    const now = input.now ?? runtime.clock.now()
+    await getActiveUser(runtime, input.userId)
+    return createSessionRecord(runtime, { ...input, now })
+  })
+}
+
+export async function revokeSession(
+  runtime: AuthServiceRuntime,
+  sessionId: SessionId,
+): Promise<void> {
+  await runtime.transaction.run(async () => {
+    const now = runtime.clock.now()
+    await revokeStoredSession(runtime, sessionId, now)
+  })
+}
+
+export async function revokeUserSessions(
+  runtime: AuthServiceRuntime,
+  input: RevokeUserSessionsInput,
+): Promise<RevokeUserSessionsResult> {
+  return runtime.transaction.run(async () => {
+    const now = input.now ?? runtime.clock.now()
+    const user = await getActiveUser(runtime, input.userId)
+    const sessions = await runtime.repos.sessionRepo.listByUserId(user.id)
+
+    if (
+      input.exceptSessionId &&
+      !sessions.some((session) => session.id === input.exceptSessionId)
+    ) {
+      throw new UniAuthError(UniAuthErrorCode.SessionNotFound, 'Session was not found.')
+    }
+
+    const revokedSessionIds: SessionId[] = []
+
+    for (const session of sessions) {
+      if (session.id === input.exceptSessionId || !hasActiveSessionStatus(session)) {
+        continue
+      }
+
+      await revokeSessionRecord(runtime, session, now)
+      revokedSessionIds.push(session.id)
+    }
+
+    return {
+      userId: user.id,
+      revokedSessionIds,
+    }
+  })
+}
+
+export async function resolveSession(
+  runtime: AuthServiceRuntime,
+  input: ResolveSessionInput,
+): Promise<Session> {
+  const now = input.now ?? runtime.clock.now()
+  assertValidDate(now, 'Session resolution time is invalid.')
+
+  if (typeof input.sessionToken !== 'string') {
+    throw invalidInput('Session token is required.')
+  }
+
+  const sessionToken = input.sessionToken.trim()
+
+  if (!sessionToken) {
+    throw invalidInput('Session token is required.')
+  }
+
+  const tokenHash = await hashOpaqueSecret(sessionToken)
+  const session =
+    (await runtime.repos.sessionRepo.findByTokenHash(tokenHash)) ??
+    (await runtime.repos.sessionRepo.findByTokenHash(await hashLegacySha256Secret(sessionToken)))
+
+  if (!session) {
+    throw new UniAuthError(UniAuthErrorCode.SessionNotFound, 'Session was not found.')
+  }
+
+  if (!isActiveSession(session, now)) {
+    throw new UniAuthError(UniAuthErrorCode.SessionNotFound, 'Session was not found.')
+  }
+
+  await requireActiveSessionUser(runtime, session.userId)
+
+  return session
+}
+
+export async function touchSession(
+  runtime: AuthServiceRuntime,
+  input: TouchSessionInput,
+): Promise<Session> {
+  return runtime.transaction.run(async () => {
+    const now = input.now ?? runtime.clock.now()
+
+    assertValidDate(now, 'Session activity time is invalid.')
+
+    const session = await requireActiveSession(runtime, input.sessionId, now)
+
+    if (session.lastSeenAt && session.lastSeenAt.getTime() >= now.getTime()) {
+      return session
+    }
+
+    return runtime.repos.sessionRepo.update(session.id, {
+      lastSeenAt: now,
+    })
+  })
+}
+
+export async function getUserSessions(
+  runtime: AuthServiceRuntime,
+  userId: UserId,
+): Promise<readonly Session[]> {
+  await getActiveUser(runtime, userId)
+  return runtime.repos.sessionRepo.listByUserId(userId)
+}
+
+export async function createSessionRecord(
+  runtime: AuthServiceRuntime,
+  input: CreateSessionInput & { readonly now: Date },
+): Promise<CreateSessionResult> {
+  const sessionToken = generateSecret()
+  const metadata = normalizeSessionMetadata(input.metadata)
+  const expiresAt = resolveSessionExpiresAt(runtime, input)
+  const session: Session = {
+    id: runtime.idGenerator.sessionId(),
+    userId: input.userId,
+    tokenHash: await hashOpaqueSecret(sessionToken),
+    status: SessionStatus.Active,
+    createdAt: input.now,
+    expiresAt,
+    ...optionalProp('metadata', metadata),
+  }
+
+  const created = await runtime.repos.sessionRepo.create(session)
+  await audit(runtime, AuditEventType.SessionCreated, input.now, {
+    userId: created.userId,
+    sessionId: created.id,
+  })
+
+  return { session: created, sessionToken }
+}
+
+function normalizeSessionMetadata(
+  metadata: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  const normalized = normalizeMetadataRecord(metadata, 'Session metadata')
+
+  if (normalized === undefined) {
+    return undefined
+  }
+
+  const sanitized = Object.fromEntries(
+    Object.entries(normalized).filter(([key]) => !RESERVED_SESSION_METADATA_KEYS.has(key)),
+  )
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined
+}
+
+function resolveSessionExpiresAt(
+  runtime: AuthServiceRuntime,
+  input: CreateSessionInput & { readonly now: Date },
+): Date {
+  assertValidDate(input.now, 'Session creation time is invalid.')
+
+  if (input.expiresAt) {
+    assertValidDate(input.expiresAt, 'Session expiration time is invalid.')
+
+    if (input.expiresAt.getTime() < input.now.getTime()) {
+      throw invalidInput('Session expiration time cannot be in the past.')
+    }
+
+    return input.expiresAt
+  }
+
+  if (!Number.isFinite(runtime.sessionTtlSeconds) || runtime.sessionTtlSeconds < 0) {
+    throw invalidInput('Session TTL must be a non-negative number of seconds.')
+  }
+
+  const expiresAt = addSeconds(input.now, runtime.sessionTtlSeconds)
+  assertValidDate(expiresAt, 'Session expiration time is invalid.')
+
+  return expiresAt
+}
+
+async function requireActiveSession(
+  runtime: AuthServiceRuntime,
+  sessionId: SessionId,
+  now: Date,
+): Promise<Session> {
+  const session = await runtime.repos.sessionRepo.findById(sessionId)
+
+  if (!session || !isActiveSession(session, now)) {
+    throw new UniAuthError(UniAuthErrorCode.SessionNotFound, 'Session was not found.')
+  }
+
+  return session
+}
+
+async function requireStoredSession(
+  runtime: AuthServiceRuntime,
+  sessionId: SessionId,
+): Promise<Session> {
+  const session = await runtime.repos.sessionRepo.findById(sessionId)
+
+  if (!session) {
+    throw new UniAuthError(UniAuthErrorCode.SessionNotFound, 'Session was not found.')
+  }
+
+  return session
+}
+
+async function requireActiveSessionUser(
+  runtime: AuthServiceRuntime,
+  userId: UserId,
+): Promise<void> {
+  try {
+    await getActiveUser(runtime, userId)
+  } catch (error) {
+    if (isUniAuthError(error) && error.code === UniAuthErrorCode.UserNotFound) {
+      throw new UniAuthError(UniAuthErrorCode.SessionNotFound, 'Session was not found.')
+    }
+
+    throw error
+  }
+}
+
+export async function revokeStoredSession(
+  runtime: AuthServiceRuntime,
+  sessionId: SessionId,
+  now: Date,
+): Promise<void> {
+  const session = await requireStoredSession(runtime, sessionId)
+  await revokeSessionRecord(runtime, session, now)
+}
+
+async function revokeSessionRecord(
+  runtime: AuthServiceRuntime,
+  session: Session,
+  now: Date,
+): Promise<void> {
+  await runtime.repos.sessionRepo.update(session.id, {
+    status: SessionStatus.Revoked,
+    revokedAt: now,
+  })
+  await audit(runtime, AuditEventType.SessionRevoked, now, {
+    userId: session.userId,
+    sessionId: session.id,
+  })
+}

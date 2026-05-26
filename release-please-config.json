@@ -1,0 +1,10 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "initial-version": "0.1.0",
+      "package-name": "@alyldas/uniauth-core",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@alyldas/uniauth-core": ["src/entrypoints/root.ts"],
+      "@alyldas/uniauth-core/contracts": ["src/entrypoints/contracts.ts"],
+      "@alyldas/uniauth-core/testing": ["src/entrypoints/testing.ts"]
+    },
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "useDefineForClassFields": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src", "test", "smoke", "*.config.ts", "*.config.mjs"]
+}

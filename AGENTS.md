@@ -1,0 +1,80 @@
+# Repository Instructions
+
+## Language
+
+All repository-facing and GitHub-facing content must be written in English only: branch names,
+commit messages, PR titles and bodies, issues, labels, milestones, changelog entries,
+version-controlled documentation, code comments, generated artifacts, and release notes. Local
+documents that are not tracked by Git are the only exception. Do not introduce new Russian text into
+repository or GitHub artifacts.
+
+## Commit Messages
+
+Use Conventional Commits. Commit messages must describe the completed result in past-tense/result
+form, not a future task or imperative instruction. Use forms such as `fixed`, `added`, `updated`,
+`removed`, or `disabled`.
+
+## Markdown Links
+
+Use relative links for repository files. Direct GitHub links are allowed in Markdown, especially in
+changelog and release-generated content. Absolute filesystem links are forbidden in `.md` files. Do
+not add ad hoc link-checker bypasses for individual changelog entries.
+
+## Core Package Rules
+
+This repository is the headless auth core.
+
+Do not add:
+
+- UI
+- HTTP framework handlers
+- Express/Fastify/Nest/Nuxt/Next integrations
+- Drizzle/Prisma/ORM runtime dependencies
+- SMTP/SMS provider runtime dependencies
+- Redis runtime dependencies
+
+Core owns:
+
+- domain model
+- service facades
+- policy
+- ports/contracts
+- errors
+- verification/session/account orchestration
+
+External adapters must depend on public exports only. Do not modify private internals to satisfy
+external adapters unless the public contract is intentionally changed.
+
+## Local Adapter Setup
+
+Before running adapter tests against local UniAuth, build this repository first:
+
+```sh
+npm install
+npm run build
+```
+
+Then return to the adapter repository and run its local setup and tests. Worktree setup scripts may
+automate dependency installation and build steps for local development worktrees.
+
+## Pull Requests And CI
+
+Before opening or updating a pull request, run the same class of local checks as CI for the affected
+area. If CI has separate `lint`, `test`, and `build` jobs, run the relevant `lint`, `test`, and
+`build` checks locally; do not stop at `test` only.
+
+If changes touch TypeScript, backend bootstrap paths, env/config, test mock objects, or import-time
+code, run a separate `build`/`tsc` even when tests are green.
+
+Before merging a pull request, verify that the exact current head commit has the required checks in
+`SUCCESS`, the branch is up to date, and conversations are resolved.
+
+## Release Please
+
+Never commit, amend, or force-push directly to branches matching `release-please--*`. Release
+changes must land only by merging the Release Please pull request into the default branch (`main`).
+If release metadata needs correction, make the source correction on a normal branch, merge it into
+`main`, and let Release Please refresh the release pull request.
+
+Do not merge Release Please pull requests without the same required checks, up-to-date branch, and
+resolved conversations required for every pull request.

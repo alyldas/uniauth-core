@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "files": [
+    "src/entrypoints/root.ts",
+    "src/entrypoints/contracts.ts",
+    "src/entrypoints/testing.ts"
+  ],
+  "include": []
+}

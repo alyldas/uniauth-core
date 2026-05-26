@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+src/**/*.d.ts
+src/**/*.d.ts.map
+src/**/*.js
+src/**/*.js.map
+*.tsbuildinfo
+
+# Test and coverage output
+coverage/
+.nyc_output/
+vitest-report/
+
+# Tool caches
+.eslintcache
+.npm-cache/
+.npm/
+.pnpm-store/
+
+# Package manager output
+package-lock.json
+*.tgz
+
+# Generated release notes
+CHANGELOG.md
+
+# Logs
+logs/
+*.log
+
+# Husky runtime files
+.husky/_
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# IDE and editor state
+.idea/
+.vscode/
+
+# OS metadata
+.DS_Store
+Thumbs.db
