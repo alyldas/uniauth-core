@@ -26,6 +26,7 @@ package-lock.json
 
 # Generated release notes
 CHANGELOG.md
+.release-please-manifest.json
 
 # Logs
 logs/
