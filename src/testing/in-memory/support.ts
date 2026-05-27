@@ -52,7 +52,7 @@ export class InMemoryPasswordHasher implements PasswordHasher {
       return false
     }
 
-    return await testPasswordScryptHasher.verify(
+    return testPasswordScryptHasher.verify(
       password,
       passwordHash.slice(TEST_PASSWORD_HASH_PREFIX.length),
     )

@@ -276,8 +276,6 @@ become separate packages.
 Future provider, persistence, and HTTP integrations should stay outside the core package unless they
 are small reference contracts. If the ecosystem grows into multiple maintained adapters, the project
 can move to a monorepo with packages for storage, providers, and framework-specific HTTP wiring.
-The pre-`1.0.0` cleanup sequence and extraction criteria are tracked in
-[Package boundary cleanup](package-boundaries.md).
 
 ## Current Public Entry Points
 

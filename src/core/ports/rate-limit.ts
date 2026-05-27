@@ -63,9 +63,5 @@ export function isRateLimitedErrorDetails(input: unknown): input is RateLimitedE
     return false
   }
 
-  if (typeof resetAt === 'string' && Number.isNaN(new Date(resetAt).getTime())) {
-    return false
-  }
-
-  return true
+  return !(typeof resetAt === 'string' && Number.isNaN(new Date(resetAt).getTime()))
 }

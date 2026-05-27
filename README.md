@@ -729,10 +729,7 @@ contact `alyldas@ya.ru`.
 - [Normalization boundary](docs/normalization.md)
 - [Session transport recipes](docs/session-transport.md)
 - [Support and admin inspection recipe](docs/support-inspection.md)
-- [Ecosystem package split](docs/ecosystem-packages.md)
-- [Comparison](docs/comparison.md)
 - [Licensing and attribution](docs/licensing.md)
-- [Roadmap](docs/roadmap.md)
 
 ## Generated Files
 

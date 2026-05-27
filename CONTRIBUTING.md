@@ -153,4 +153,3 @@ of bypassing the rule silently.
 - [Development](docs/development.md)
 - [Architecture](docs/architecture.md)
 - [Security model](docs/security.md)
-- [Roadmap](docs/roadmap.md)

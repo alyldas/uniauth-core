@@ -230,7 +230,7 @@ If an adapter cannot be implemented through public exports:
 
 1. Document the missing contract in this repository.
 2. Add or change the public export intentionally.
-3. Update the compatibility notes in [Ecosystem package split](ecosystem-packages.md).
+3. Update the compatibility notes in the related adapter repository.
 4. Add focused tests in the core repository.
 5. Update the external adapter after the core contract is available.
 
@@ -239,7 +239,5 @@ hidden release contract without tests or documentation.
 
 ## Related Documentation
 
-- [Ecosystem package split](ecosystem-packages.md)
-- [Package boundary cleanup](package-boundaries.md)
 - [Backend integration recipes](backend-recipes.md)
 - [Session transport recipes](session-transport.md)
