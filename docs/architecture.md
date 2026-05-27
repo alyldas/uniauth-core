@@ -270,16 +270,28 @@ application-owned.
 
 ## Repository Shape
 
-The project starts as a single package so the core domain contracts can stabilize before adapters
-become separate packages.
+`@alyldas/uniauth-core` is the headless core package. External adapters, providers, bridges, and
+examples live in separate repositories:
 
-Future provider, persistence, and HTTP integrations should stay outside the core package unless they
-are small reference contracts. If the ecosystem grows into multiple maintained adapters, the project
-can move to a monorepo with packages for storage, providers, and framework-specific HTTP wiring.
+- `alyldas/uniauth-drizzle`
+- `alyldas/uniauth-express`
+- `alyldas/uniauth-nuxt`
+- `alyldas/uniauth-example-nuxt-express`
+- `alyldas/uniauth-messenger-provider`
+- `alyldas/uniauth-oauth-oidc-provider`
+- `alyldas/uniauth-authjs-bridge`
+- `alyldas/uniauth-better-auth-bridge`
+
+Those repositories are normal git repositories. They are not submodules and are not part of a
+monorepo.
+
+Core must not absorb HTTP, UI, ORM runtime, provider SDK runtime, SMTP/SMS runtime, Redis, queue, or
+hosted infrastructure responsibilities. External packages must depend only on documented public core
+exports and keep their runtime wiring explicit.
 
 ## Current Public Entry Points
 
-The current package already models the intended long-term split through explicit public entry points:
+The public core entry points are:
 
 - `@alyldas/uniauth-core`:
   core domain types, service facade, policies, errors, read-side helpers, and local auth flows.
@@ -289,37 +301,10 @@ The current package already models the intended long-term split through explicit
 - `@alyldas/uniauth-core/testing`:
   in-memory store, senders, providers, and test-only support utilities.
 
-This is a modular monolith boundary, not a monorepo yet. New capabilities should prefer an explicit
-subpath before introducing another root export or another package.
-
-## Extraction Criteria
-
-Move a subpath into a separate npm package only when most of these are true:
-
-1. The public API is already consumed through an explicit subpath rather than a root export.
-2. The module can depend only on stable root/core types and `@alyldas/uniauth-core/contracts`, not on
-   internal source paths.
-3. The module has runtime dependencies, operational assumptions, or release cadence that can change
-   independently from core.
-4. The module has its own focused tests, smoke coverage, and docs/examples without hidden coupling
-   to unrelated package internals.
-5. The extraction reduces real package ownership pressure, such as provider SDK churn, database
-   driver cadence, or framework-specific integration surface.
-6. The new boundary is understandable enough that a consumer can choose it intentionally.
-
-If those criteria are not met, keep the code in the current package and harden the subpath
-boundary instead of splitting prematurely.
-
-## Migration Expectations
-
-- Do not import from internal `src/**` paths in application code, tests outside this repository, or
-  downstream packages.
-- Prefer the public subpath that matches the module family you need; do not assume that a root
-  compatibility re-export is the permanent home of that API.
-- When a future extraction happens, the same release should update the docs, examples, changelog,
-  and migration notes so consumers can move from the old subpath cleanly.
-- Before `1.0.0`, package extraction can still happen in a minor release, but only after the
-  boundary has been explicit and documented first.
+Do not import from internal `src/**` or `dist/**` paths in application code, tests outside this
+repository, or downstream packages. If an external package needs a symbol that is not available from
+one of the public entry points, the core contract should be changed intentionally before that package
+depends on the symbol.
 
 For framework-level HTTP composition examples, see [Backend integration recipes](backend-recipes.md).
 For trusted backend inspection composition on top of the read-side surface, see
