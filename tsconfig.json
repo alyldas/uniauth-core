@@ -22,5 +22,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src", "test", "smoke", "*.config.ts", "*.config.mjs"]
+  "include": ["src", "tests/unit", "tests/smoke", "*.config.ts", "*.config.mjs"]
 }

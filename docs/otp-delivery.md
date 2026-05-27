@@ -153,13 +153,13 @@ Applications should preserve these external behaviors:
 
 Core-owned delivery semantics are already covered by generic tests:
 
-- [test/core/otp-and-verifications.test.ts](../test/core/otp-and-verifications.test.ts): failed OTP
+- [tests/unit/core/otp-and-verifications.test.ts](../tests/unit/core/otp-and-verifications.test.ts): failed OTP
   delivery leaves a pending verification;
-- [test/magic-link.test.ts](../test/magic-link.test.ts): failed magic-link creation or delivery
+- [tests/unit/magic-link.test.ts](../tests/unit/magic-link.test.ts): failed magic-link creation or delivery
   keeps the verification pending;
-- [test/password.test.ts](../test/password.test.ts): failed password-recovery link creation or
+- [tests/unit/password.test.ts](../tests/unit/password.test.ts): failed password-recovery link creation or
   delivery keeps the verification pending;
-- [test/rate-limit.test.ts](../test/rate-limit.test.ts): OTP start rate-limit denial happens before
+- [tests/unit/rate-limit.test.ts](../tests/unit/rate-limit.test.ts): OTP start rate-limit denial happens before
   verification creation or send side effects.
 
 Those tests are intentionally provider-agnostic. Provider-specific retry workers, webhook payloads,

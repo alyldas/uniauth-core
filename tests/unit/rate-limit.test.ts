@@ -9,7 +9,7 @@ import {
   isRateLimitedErrorDetails,
   DefaultAuthService,
 } from '@alyldas/uniauth-core'
-import { createAuthServiceRuntime } from '../src/core/application/runtime-defaults.js'
+import { createAuthServiceRuntime } from '../../src/core/application/runtime-defaults.js'
 import {
   InMemoryAuthStore,
   InMemoryRateLimiter,

@@ -4,7 +4,7 @@ import {
   type ProviderIdentityAssertion,
   createAuthService,
 } from '@alyldas/uniauth-core'
-import { resolveAssertion } from '../../src/core/application/sign-in/assertion.js'
+import { resolveAssertion } from '../../../src/core/application/sign-in/assertion.js'
 import {
   InMemoryAuthStore,
   StaticAuthProvider,

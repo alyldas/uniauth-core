@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ConsoleEmailSender } from '../examples/shared/email.js'
+import { ConsoleEmailSender } from '../../examples/shared/email.js'
 
 describe('example email sender', () => {
   it('redacts delivered email text in console output by default', async () => {

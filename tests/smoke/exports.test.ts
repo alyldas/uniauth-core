@@ -3,9 +3,9 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import packageJson from '../package.json'
-import tsconfigBuild from '../tsconfig.build.json'
-import tsupConfig from '../tsup.config'
+import packageJson from '../../package.json'
+import tsconfigBuild from '../../tsconfig.build.json'
+import tsupConfig from '../../tsup.config'
 
 interface PackageMetadata {
   readonly name: string
@@ -71,7 +71,7 @@ const packageExportImportTarget = (exportPath: keyof typeof expectedEntrypoints)
     throw new Error(`Missing package export metadata for ${exportPath}.`)
   }
 
-  return new URL(`../${exportTarget.import.slice(2)}`, import.meta.url).href
+  return new URL(`../../${exportTarget.import.slice(2)}`, import.meta.url).href
 }
 
 const findMatchesWithLineNumbers = (source: string, pattern: RegExp): string[] => {
@@ -329,7 +329,7 @@ describe('package exports', () => {
   it('type-checks package self-reference consumer imports', async () => {
     const temporaryDirectory = await mkdtemp(join(process.cwd(), '.uniauth-package-consumer-'))
     const consumerSourcePath = join(temporaryDirectory, 'package-consumer-check.ts')
-    const tscPath = fileURLToPath(new URL('../node_modules/typescript/bin/tsc', import.meta.url))
+    const tscPath = fileURLToPath(new URL('../../node_modules/typescript/bin/tsc', import.meta.url))
 
     try {
       await writeTypeConsumerCheckFile(temporaryDirectory)
@@ -368,39 +368,39 @@ describe('package exports', () => {
 
   it('keeps testing package declarations aligned with the stable public surface', async () => {
     const contractsDeclarations = await readFile(
-      new URL('../dist/contracts/index.d.ts', import.meta.url),
+      new URL('../../dist/contracts/index.d.ts', import.meta.url),
       'utf8',
     )
     const contractsPortDeclarations = await readFile(
-      new URL('../dist/contracts/ports.d.ts', import.meta.url),
+      new URL('../../dist/contracts/ports.d.ts', import.meta.url),
       'utf8',
     )
     const flowDeclarations = await readFile(
-      new URL('../dist/core/domain/flows.d.ts', import.meta.url),
+      new URL('../../dist/core/domain/flows.d.ts', import.meta.url),
       'utf8',
     )
     const serviceDeclarations = await readFile(
-      new URL('../dist/core/domain/service.d.ts', import.meta.url),
+      new URL('../../dist/core/domain/service.d.ts', import.meta.url),
       'utf8',
     )
     const localAuthDeclarations = await readFile(
-      new URL('../dist/core/domain/local-auth.d.ts', import.meta.url),
+      new URL('../../dist/core/domain/local-auth.d.ts', import.meta.url),
       'utf8',
     )
     const viewDeclarations = await readFile(
-      new URL('../dist/core/domain/views.d.ts', import.meta.url),
+      new URL('../../dist/core/domain/views.d.ts', import.meta.url),
       'utf8',
     )
     const repositoryPortDeclarations = await readFile(
-      new URL('../dist/core/ports/repositories.d.ts', import.meta.url),
+      new URL('../../dist/core/ports/repositories.d.ts', import.meta.url),
       'utf8',
     )
     const contractsRuntimeDeclarations = await readFile(
-      new URL('../dist/contracts/runtime.d.ts', import.meta.url),
+      new URL('../../dist/contracts/runtime.d.ts', import.meta.url),
       'utf8',
     )
     const testingKitDeclarations = await readFile(
-      new URL('../dist/testing/in-memory/kit.d.ts', import.meta.url),
+      new URL('../../dist/testing/in-memory/kit.d.ts', import.meta.url),
       'utf8',
     )
 

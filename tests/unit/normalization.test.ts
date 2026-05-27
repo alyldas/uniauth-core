@@ -6,7 +6,7 @@ import {
   createAuthNormalizer,
   createDefaultAuthPolicy,
 } from '@alyldas/uniauth-core'
-import { normalizeOtpTarget } from '../src/core/application/otp-delivery.js'
+import { normalizeOtpTarget } from '../../src/core/application/otp-delivery.js'
 import { createInMemoryAuthKit } from '@alyldas/uniauth-core/testing'
 import { assertion, createStrictNormalizer, now } from './helpers.js'
 

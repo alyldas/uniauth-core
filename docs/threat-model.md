@@ -52,9 +52,9 @@ UniAuth response:
 
 Current coverage:
 
-- [test/core/policies-and-merge.test.ts](../test/core/policies-and-merge.test.ts)
-- [test/core/current-account-actions.test.ts](../test/core/current-account-actions.test.ts)
-- [test/provider-policy/trust-policy-behavior.test.ts](../test/provider-policy/trust-policy-behavior.test.ts)
+- [tests/unit/core/policies-and-merge.test.ts](../tests/unit/core/policies-and-merge.test.ts)
+- [tests/unit/core/current-account-actions.test.ts](../tests/unit/core/current-account-actions.test.ts)
+- [tests/unit/provider-policy/trust-policy-behavior.test.ts](../tests/unit/provider-policy/trust-policy-behavior.test.ts)
 
 Residual risk:
 
@@ -78,7 +78,7 @@ UniAuth response:
 
 Current coverage:
 
-- [test/provider-policy/provider-resolution-and-validation.test.ts](../test/provider-policy/provider-resolution-and-validation.test.ts)
+- [tests/unit/provider-policy/provider-resolution-and-validation.test.ts](../tests/unit/provider-policy/provider-resolution-and-validation.test.ts)
 
 Residual risk:
 
@@ -102,11 +102,11 @@ UniAuth response:
 
 Current coverage:
 
-- [test/core/otp-and-verifications.test.ts](../test/core/otp-and-verifications.test.ts)
-- [test/magic-link.test.ts](../test/magic-link.test.ts)
-- [test/password.test.ts](../test/password.test.ts)
-- [test/rate-limit.test.ts](../test/rate-limit.test.ts)
-- [test/otp-options.test.ts](../test/otp-options.test.ts)
+- [tests/unit/core/otp-and-verifications.test.ts](../tests/unit/core/otp-and-verifications.test.ts)
+- [tests/unit/magic-link.test.ts](../tests/unit/magic-link.test.ts)
+- [tests/unit/password.test.ts](../tests/unit/password.test.ts)
+- [tests/unit/rate-limit.test.ts](../tests/unit/rate-limit.test.ts)
+- [tests/unit/otp-options.test.ts](../tests/unit/otp-options.test.ts)
 
 Residual risk:
 
@@ -131,9 +131,9 @@ UniAuth response:
 
 Current coverage:
 
-- [test/core/read-side-and-sessions.test.ts](../test/core/read-side-and-sessions.test.ts)
-- [test/service-edges/sign-in-and-session-edge-cases.test.ts](../test/service-edges/sign-in-and-session-edge-cases.test.ts)
-- [test/service-edges/merge-edge-cases.test.ts](../test/service-edges/merge-edge-cases.test.ts)
+- [tests/unit/core/read-side-and-sessions.test.ts](../tests/unit/core/read-side-and-sessions.test.ts)
+- [tests/unit/service-edges/sign-in-and-session-edge-cases.test.ts](../tests/unit/service-edges/sign-in-and-session-edge-cases.test.ts)
+- [tests/unit/service-edges/merge-edge-cases.test.ts](../tests/unit/service-edges/merge-edge-cases.test.ts)
 
 Residual risk:
 
@@ -157,10 +157,10 @@ UniAuth response:
 
 Current coverage:
 
-- [test/core/policies-and-merge.test.ts](../test/core/policies-and-merge.test.ts)
-- [test/provider-policy/trust-policy-behavior.test.ts](../test/provider-policy/trust-policy-behavior.test.ts)
-- [test/provider-policy/policy-and-verification-edge-cases.test.ts](../test/provider-policy/policy-and-verification-edge-cases.test.ts)
-- [test/service-edges/merge-edge-cases.test.ts](../test/service-edges/merge-edge-cases.test.ts)
+- [tests/unit/core/policies-and-merge.test.ts](../tests/unit/core/policies-and-merge.test.ts)
+- [tests/unit/provider-policy/trust-policy-behavior.test.ts](../tests/unit/provider-policy/trust-policy-behavior.test.ts)
+- [tests/unit/provider-policy/policy-and-verification-edge-cases.test.ts](../tests/unit/provider-policy/policy-and-verification-edge-cases.test.ts)
+- [tests/unit/service-edges/merge-edge-cases.test.ts](../tests/unit/service-edges/merge-edge-cases.test.ts)
 
 Residual risk:
 

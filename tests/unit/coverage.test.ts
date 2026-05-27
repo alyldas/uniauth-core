@@ -35,12 +35,12 @@ import {
   verifyOpaqueSecret,
   verifySecret,
 } from '@alyldas/uniauth-core'
-import { createAuthServiceRuntime } from '../src/core/application/runtime-defaults.js'
+import { createAuthServiceRuntime } from '../../src/core/application/runtime-defaults.js'
 import {
   enforceRateLimit,
   issueCurrentAccountRecentAuthMarker,
   resolveReAuthenticatedAt,
-} from '../src/core/application/support.js'
+} from '../../src/core/application/support.js'
 import { InMemoryAuthStore, InMemoryRateLimiter } from '@alyldas/uniauth-core/testing'
 import { assertion, identity, now, user } from './helpers.js'
 

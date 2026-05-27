@@ -14,8 +14,8 @@ import {
   type ProviderIdentityAssertion,
   type User,
 } from '@alyldas/uniauth-core'
-import type { AuthServiceRuntime } from '../src/core/application/runtime.js'
-import { issueCurrentAccountRecentAuthMarker } from '../src/core/application/support.js'
+import type { AuthServiceRuntime } from '../../src/core/application/runtime.js'
+import { issueCurrentAccountRecentAuthMarker } from '../../src/core/application/support.js'
 
 export const now = new Date('2026-01-01T00:00:00.000Z')
 
