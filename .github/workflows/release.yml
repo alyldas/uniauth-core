@@ -4,14 +4,6 @@ on:
   release:
     types:
       - published
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: Run npm publish as a dry run.
-        required: true
-        type: boolean
-        default: true
-
 permissions:
   contents: read
   packages: write
@@ -51,13 +43,7 @@ jobs:
         run: npm ci
       - name: Check
         run: npm run check
-      - name: Publish dry run
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
-        run: npm publish --dry-run
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish
-        if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run) }}
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

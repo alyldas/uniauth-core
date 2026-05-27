@@ -4,7 +4,7 @@
 [![Version](https://img.shields.io/github/package-json/v/alyldas/uniauth-core?label=version)](package.json)
 [![License](https://img.shields.io/badge/license-PolyForm%20Strict%201.0.0-blue)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-ready-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![GitHub Packages](https://img.shields.io/badge/GitHub%20Packages-@alyldas%2Funiauth-core-24292f?logo=github)](https://github.com/alyldas/uniauth-core/pkgs/npm/uniauth-core)
+[![GitHub Packages](https://img.shields.io/static/v1?label=GitHub%20Packages&message=%40alyldas%2Funiauth-core&color=24292f&logo=github)](https://github.com/users/alyldas/packages/npm/package/uniauth-core)
 
 `@alyldas/uniauth-core` is an ESM-only headless identity orchestration core for TypeScript and Node.js.
 
