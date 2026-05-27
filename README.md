@@ -714,11 +714,15 @@ contact `alyldas@ya.ru`.
 - [Current-account contact change example](examples/current-account-contact-change/index.ts)
 - [Link and unlink example](examples/link-unlink/index.ts)
 
+## Ecosystem Packages
+
+- [Ecosystem architecture](docs/architecture.md)
+- [Adapter author guide](docs/adapter-author-guide.md)
+- [Migration from archived `@alyldas/uniauth`](docs/migration-from-uniauth.md)
+
 ## Documentation
 
 - [Development](docs/development.md)
-- [Architecture](docs/architecture.md)
-- [Adapter author guide](docs/adapter-author-guide.md)
 - [Backend integration recipes](docs/backend-recipes.md)
 - [Account security recipes](docs/account-security.md)
 - [Security model](docs/security.md)
