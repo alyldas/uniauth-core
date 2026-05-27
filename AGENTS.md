@@ -2,17 +2,17 @@
 
 ## Language
 
-All repository-facing and GitHub-facing content must be written in English only: branch names,
+All repository-facing, Git-facing, and GitHub-facing content must be written in English only: branch names,
 commit messages, PR titles and bodies, issues, labels, milestones, changelog entries,
 version-controlled documentation, code comments, generated artifacts, and release notes. Local
-documents that are not tracked by Git are the only exception. Do not introduce new Russian text into
-repository or GitHub artifacts.
+documents that are not tracked by Git are the only exception. Russian text is forbidden in Git and
+GitHub artifacts.
 
 ## Commit Messages
 
-Use Conventional Commits. Commit messages must describe the completed result in past-tense/result
-form, not a future task or imperative instruction. Use forms such as `fixed`, `added`, `updated`,
-`removed`, or `disabled`.
+Use strict Conventional Commits in English only. Commit messages must describe the completed result
+in past-tense/result form, not a future task or imperative instruction. Use forms such as `fixed`,
+`added`, `updated`, `removed`, `hardened`, or `disabled`.
 
 ## Markdown Links
 
