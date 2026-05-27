@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0 (2026-05-27)
+
+
+### Features
+
+* added initial 0.1.0 package ([f4335bd](https://github.com/alyldas/uniauth-core/commit/f4335bd64d3d35c54a41a569c20d86f90d220afb))
+
 ## 0.1.0 (2026-05-26)
 
 ### Changed
