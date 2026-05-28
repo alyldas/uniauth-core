@@ -728,6 +728,7 @@ contact `alyldas@ya.ru`.
 - [Security model](docs/security.md)
 - [Threat model](docs/threat-model.md)
 - [Local auth flows](docs/local-auth.md)
+- [Passwordless strategy plan](docs/passwordless-strategy-plan.md)
 - [OTP delivery boundary](docs/otp-delivery.md)
 - [OTP and magic-link abuse-control recipes](docs/abuse-control.md)
 - [Normalization boundary](docs/normalization.md)
