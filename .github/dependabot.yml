@@ -4,30 +4,32 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    open-pull-requests-limit: 5
+      day: 'monday'
+      time: '04:00'
+      timezone: 'Etc/UTC'
+    open-pull-requests-limit: 10
     labels:
       - 'dependencies'
       - 'npm'
-    groups:
-      dev-dependencies:
-        dependency-type: 'development'
-        patterns:
-          - '*'
-    # Keep Node runtime types on the minimum supported Node.js major.
+    commit-message:
+      prefix: 'chore'
+      prefix-development: 'chore'
+      include: 'scope'
     ignore:
       - dependency-name: '@types/node'
         update-types:
           - 'version-update:semver-major'
-
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
+      day: 'monday'
+      time: '04:30'
+      timezone: 'Etc/UTC'
     open-pull-requests-limit: 5
     labels:
       - 'dependencies'
       - 'ci'
-    groups:
-      github-actions:
-        patterns:
-          - '*'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
